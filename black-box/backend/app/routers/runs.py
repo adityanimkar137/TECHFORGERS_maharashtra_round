@@ -30,6 +30,13 @@ def create_run(
 
     return run
 
+
+# NEW: list all runs (used by the frontend Executions table and Dashboard)
+@router.get("/", response_model=list[RunResponse])
+def list_runs(db: Session = Depends(get_db)):
+    return db.query(Run).order_by(Run.id.desc()).all()
+
+
 @router.get("/{run_id}", response_model=RunResponse)
 def get_run(run_id: int, db: Session = Depends(get_db)):
     run = db.query(Run).filter(Run.id == run_id).first()
