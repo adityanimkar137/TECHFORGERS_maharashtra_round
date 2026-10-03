@@ -1,0 +1,51 @@
+<html><head><meta charset='utf-8'><title>Black Box report</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:900px;margin:30px auto;padding:0 16px;color:#222}
+table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;text-align:left;font-size:14px}
+th{background:#f0f0f0}.card{border:1px solid #bbb;border-radius:8px;padding:12px 18px;margin:20px 0}
+tr.skipped td{color:#aaa;background:#fafafa}tr.suspect td{background:#fff3cd}tr.truth td{font-weight:bold}
+tr.avg td{font-weight:bold;background:#eef}.note{color:#666;font-size:13px}</style></head><body>
+<h1>Black Box &mdash; failure diagnosis report</h1>
+<p>Held-out failed runs: 664. Results come from a simulated agent, not a real one.</p>
+<h2>Results (search: fix top-3 suspects in order)</h2>
+<table><tr><th>fault type</th><th>runs</th><th>fixed on 1st try</th><th>fixed within 3</th>
+<th>steps re-run vs 1 full re-run</th></tr><tr><td>bad_retrieval</td><td>71</td><td>92%</td><td>100%</td><td>81%</td></tr><tr><td>hallucination</td><td>64</td><td>100%</td><td>100%</td><td>73%</td></tr><tr><td>silent_corruption</td><td>70</td><td>20%</td><td>59%</td><td>142%</td></tr><tr><td>tool_error</td><td>57</td><td>100%</td><td>100%</td><td>57%</td></tr><tr><td>wrong_tool</td><td>402</td><td>100%</td><td>100%</td><td>64%</td></tr><tr class='avg'><td>equal-weighted average</td><td></td><td>82%</td><td>92%</td><td>83%</td></tr></table>
+<h2>Example diagnoses</h2><div class='card'>
+<h3>Run 86 &mdash; fault: bad_retrieval</h3>
+<p><b>Diagnosis:</b> step 4 (retrieve) &mdash; top-1 is correct. Search: fixed on attempt 1.</p>
+<p><b>Evidence:</b></p><ul><li>retrieval score 0.24 is 7.0 std below normal</li></ul>
+<table><tr><th>step</th><th>type</th><th>tool</th><th>conf.</th><th>latency ms</th><th></th></tr><tr class='skipped '><td>0</td><td>plan</td><td>planner</td><td>0.69</td><td>304</td><td></td></tr><tr class='skipped '><td>1</td><td>retrieve</td><td>vector_db</td><td>0.92</td><td>215</td><td></td></tr><tr class='skipped '><td>2</td><td>tool_call</td><td>calculator</td><td>0.84</td><td>128</td><td></td></tr><tr class='skipped '><td>3</td><td>retrieve</td><td>search</td><td>0.92</td><td>129</td><td></td></tr><tr class='suspect truth'><td>4</td><td>retrieve</td><td>vector_db</td><td>0.88</td><td>123</td><td>&#9664; suspected &#9733; true cause</td></tr><tr class=''><td>5</td><td>verify</td><td>llm</td><td>0.91</td><td>156</td><td></td></tr><tr class=''><td>6</td><td>answer</td><td>llm</td><td>0.98</td><td>97</td><td></td></tr></table>
+<p class='note'>Greyed rows were skipped by checkpointed replay (replay re-ran 3 of 7 steps).</p>
+<p><b>Trace comparison:</b> original output = 940,
+replayed = 788, expected = 788
+&rarr; fixed</p></div><div class='card'>
+<h3>Run 56 &mdash; fault: hallucination</h3>
+<p><b>Diagnosis:</b> step 2 (reason) &mdash; top-1 is correct. Search: fixed on attempt 1.</p>
+<p><b>Evidence:</b></p><ul><li>confidence 0.30 is 8.0 std below normal</li><li>token count 237 is 4.0 std above normal</li><li>later steps show lower confidence than normal (downstream degradation)</li></ul>
+<table><tr><th>step</th><th>type</th><th>tool</th><th>conf.</th><th>latency ms</th><th></th></tr><tr class='skipped '><td>0</td><td>plan</td><td>planner</td><td>0.93</td><td>156</td><td></td></tr><tr class='skipped '><td>1</td><td>retrieve</td><td>vector_db</td><td>0.70</td><td>602</td><td></td></tr><tr class='suspect truth'><td>2</td><td>reason</td><td>llm</td><td>0.30</td><td>183</td><td>&#9664; suspected &#9733; true cause</td></tr><tr class=''><td>3</td><td>tool_call</td><td>code_exec</td><td>0.90</td><td>206</td><td></td></tr><tr class=''><td>4</td><td>retrieve</td><td>search</td><td>0.80</td><td>166</td><td></td></tr><tr class=''><td>5</td><td>retrieve</td><td>search</td><td>0.79</td><td>153</td><td></td></tr><tr class=''><td>6</td><td>tool_call</td><td>code_exec</td><td>0.81</td><td>157</td><td></td></tr><tr class=''><td>7</td><td>retrieve</td><td>search</td><td>0.84</td><td>180</td><td></td></tr><tr class=''><td>8</td><td>retrieve</td><td>search</td><td>0.77</td><td>133</td><td></td></tr><tr class=''><td>9</td><td>verify</td><td>llm</td><td>0.83</td><td>106</td><td></td></tr><tr class=''><td>10</td><td>answer</td><td>llm</td><td>0.66</td><td>159</td><td></td></tr></table>
+<p class='note'>Greyed rows were skipped by checkpointed replay (replay re-ran 9 of 11 steps).</p>
+<p><b>Trace comparison:</b> original output = 580,
+replayed = 635, expected = 635
+&rarr; fixed</p></div><div class='card'>
+<h3>Run 15 &mdash; fault: tool_error</h3>
+<p><b>Diagnosis:</b> step 4 (tool_call) &mdash; top-1 is correct. Search: fixed on attempt 1.</p>
+<p><b>Evidence:</b></p><ul><li>step reported an error</li><li>later steps show lower confidence than normal (downstream degradation)</li></ul>
+<table><tr><th>step</th><th>type</th><th>tool</th><th>conf.</th><th>latency ms</th><th></th></tr><tr class='skipped '><td>0</td><td>plan</td><td>planner</td><td>0.96</td><td>153</td><td></td></tr><tr class='skipped '><td>1</td><td>retrieve</td><td>search</td><td>0.86</td><td>118</td><td></td></tr><tr class='skipped '><td>2</td><td>retrieve</td><td>search</td><td>0.96</td><td>932</td><td></td></tr><tr class='skipped '><td>3</td><td>tool_call</td><td>code_exec</td><td>0.72</td><td>164</td><td></td></tr><tr class='suspect truth'><td>4</td><td>tool_call</td><td>code_exec</td><td>0.87</td><td>371</td><td>&#9664; suspected &#9733; true cause</td></tr><tr class=''><td>5</td><td>verify</td><td>llm</td><td>0.65</td><td>156</td><td></td></tr><tr class=''><td>6</td><td>answer</td><td>llm</td><td>0.86</td><td>175</td><td></td></tr></table>
+<p class='note'>Greyed rows were skipped by checkpointed replay (replay re-ran 3 of 7 steps).</p>
+<p><b>Trace comparison:</b> original output = 567,
+replayed = 912, expected = 912
+&rarr; fixed</p></div><div class='card'>
+<h3>Run 3 &mdash; fault: wrong_tool</h3>
+<p><b>Diagnosis:</b> step 1 (retrieve) &mdash; top-1 is correct. Search: fixed on attempt 1.</p>
+<p><b>Evidence:</b></p><ul><li>used tool &#x27;calculator&#x27;, never seen on &#x27;retrieve&#x27; steps in successful runs</li><li>later steps show lower confidence than normal (downstream degradation)</li></ul>
+<table><tr><th>step</th><th>type</th><th>tool</th><th>conf.</th><th>latency ms</th><th></th></tr><tr class='skipped '><td>0</td><td>plan</td><td>planner</td><td>0.90</td><td>140</td><td></td></tr><tr class='suspect truth'><td>1</td><td>retrieve</td><td>calculator</td><td>0.81</td><td>118</td><td>&#9664; suspected &#9733; true cause</td></tr><tr class=''><td>2</td><td>reason</td><td>llm</td><td>0.84</td><td>172</td><td></td></tr><tr class=''><td>3</td><td>tool_call</td><td>code_exec</td><td>0.79</td><td>162</td><td></td></tr><tr class=''><td>4</td><td>reason</td><td>llm</td><td>0.73</td><td>202</td><td></td></tr><tr class=''><td>5</td><td>reason</td><td>llm</td><td>0.82</td><td>186</td><td></td></tr><tr class=''><td>6</td><td>tool_call</td><td>code_exec</td><td>0.77</td><td>187</td><td></td></tr><tr class=''><td>7</td><td>tool_call</td><td>calculator</td><td>0.64</td><td>131</td><td></td></tr><tr class=''><td>8</td><td>verify</td><td>llm</td><td>0.78</td><td>623</td><td></td></tr><tr class=''><td>9</td><td>answer</td><td>llm</td><td>0.79</td><td>155</td><td></td></tr></table>
+<p class='note'>Greyed rows were skipped by checkpointed replay (replay re-ran 9 of 10 steps).</p>
+<p><b>Trace comparison:</b> original output = 485,
+replayed = 403, expected = 403
+&rarr; fixed</p></div><div class='card'>
+<h3>Run 12 &mdash; fault: silent_corruption</h3>
+<p><b>Diagnosis:</b> step 6 (verify) &mdash; top-1 is wrong (true cause was step 2). Search: not fixed within top 3.</p>
+<p><b>Evidence:</b></p><ul><li>later steps show lower confidence than normal (downstream degradation)</li></ul>
+<table><tr><th>step</th><th>type</th><th>tool</th><th>conf.</th><th>latency ms</th><th></th></tr><tr class='skipped '><td>0</td><td>plan</td><td>planner</td><td>0.86</td><td>149</td><td></td></tr><tr class='skipped '><td>1</td><td>retrieve</td><td>vector_db</td><td>0.84</td><td>169</td><td></td></tr><tr class='skipped truth'><td>2</td><td>retrieve</td><td>search</td><td>0.89</td><td>143</td><td>&#9733; true cause</td></tr><tr class='skipped '><td>3</td><td>retrieve</td><td>vector_db</td><td>0.82</td><td>152</td><td></td></tr><tr class='skipped '><td>4</td><td>tool_call</td><td>calculator</td><td>0.81</td><td>194</td><td></td></tr><tr class='skipped '><td>5</td><td>tool_call</td><td>calculator</td><td>0.87</td><td>152</td><td></td></tr><tr class='suspect '><td>6</td><td>verify</td><td>llm</td><td>0.80</td><td>86</td><td>&#9664; suspected </td></tr><tr class=''><td>7</td><td>answer</td><td>llm</td><td>0.80</td><td>125</td><td></td></tr></table>
+<p class='note'>Greyed rows were skipped by checkpointed replay (replay re-ran 2 of 8 steps).</p>
+<p><b>Trace comparison:</b> original output = 16,
+replayed = 16, expected = 769
+&rarr; still failing</p></div></body></html>
