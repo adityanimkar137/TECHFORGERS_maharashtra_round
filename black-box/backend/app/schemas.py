@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -10,6 +12,7 @@ class RunCreate(BaseModel):
 
 class RunResponse(RunCreate):
     id: int
+    created_at: datetime | None = None   # NEW
 
     class Config:
         from_attributes = True
@@ -27,6 +30,7 @@ class StepCreate(BaseModel):
 class StepResponse(StepCreate):
     id: int
     run_id: int
+    created_at: datetime | None = None   # NEW
 
     class Config:
         from_attributes = True
