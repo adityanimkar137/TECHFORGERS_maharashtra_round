@@ -1,0 +1,51 @@
+{
+  "run_id": "RUN-001",
+  "status": "failed",
+  "steps": [
+    {
+      "step_id": 1,
+      "name": "Read User Question",
+      "step_type": "llm_call",
+      "input_data": "Find the cheapest laptop",
+      "output": "Find cheapest laptop",
+      "status": "success",
+      "metadata": {}
+    },
+    {
+      "step_id": 2,
+      "name": "Search Products",
+      "step_type": "tool_call",
+      "input_data": "laptops under budget",
+      "output": "Laptop A, Laptop B",
+      "status": "success",
+      "metadata": {}
+    },
+    {
+      "step_id": 3,
+      "name": "Extract Price",
+      "step_type": "data_extraction",
+      "input_data": "Laptop A price",
+      "output": "₹459990",
+      "status": "failed",
+      "metadata": {}
+    },
+    {
+      "step_id": 4,
+      "name": "Calculate Result",
+      "step_type": "logic",
+      "input_data": "Extracted price",
+      "output": "Calculation failed",
+      "status": "failed",
+      "metadata": {}
+    },
+    {
+      "step_id": 5,
+      "name": "Generate Final Answer",
+      "step_type": "llm_call",
+      "input_data": "Calculated result",
+      "output": "Could not generate correct answer",
+      "status": "failed",
+      "metadata": {}
+    }
+  ]
+}
