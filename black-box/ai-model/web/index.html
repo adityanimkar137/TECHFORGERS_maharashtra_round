@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Black Box</title>
+<style>
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#0f1218;color:#e6e8ee;display:flex;height:100vh}
+#side{width:230px;overflow:auto;border-right:1px solid #262b36;padding:10px}
+#main{flex:1;overflow:auto;padding:20px 28px}
+.run{padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between}
+.run:hover,.run.on{background:#1d2330}.tag{font-size:11px;color:#8b93a7}
+h1{font-size:20px;margin:0 0 4px}
+.tl{display:flex;gap:8px;overflow-x:auto;padding:10px 0}
+.step{min-width:108px;border:2px solid #262b36;border-radius:8px;padding:8px;font-size:12px}
+.step.sus{border-color:#f5b942}.step.tru{box-shadow:0 0 0 2px #3ddc84 inset}.step.skip{opacity:.4}
+.box{background:#161b25;border-radius:8px;padding:12px 16px;margin:12px 0}
+.ok{color:#3ddc84}.bad{color:#ff6b6b}.mut{color:#8b93a7;font-size:13px}
+table{border-collapse:collapse;width:100%}td,th{padding:5px 8px;border-bottom:1px solid #262b36;text-align:left;font-size:13px}
+button{background:#1d2330;color:#e6e8ee;border:1px solid #333b4d;border-radius:6px;padding:6px 12px;cursor:pointer}
+</style></head><body>
+<div id="side"><button onclick="home()">Results</button><p class="mut">Failed runs (held out)</p><div id="list"></div></div>
+<div id="main"></div>
+<script>
+const $=id=>document.getElementById(id), j=async u=>(await fetch(u)).json(), pct=x=>Math.round(x*100)+'%';
+async function home(){
+  const s=await j('/api/summary');
+  let a1=0,a3=0,c=0;s.forEach(r=>{a1+=r.fixed1;a3+=r.fixed3;c+=r.cost});
+  const n=s.length;
+  $('main').innerHTML=`<h1>Black Box</h1><p class="mut">Finds the step that made an agent run fail, then tests a fix by replaying from a checkpoint. Data comes from a simulated agent.</p>
+  <div class="box"><table><tr><th>Fault type</th><th>Runs</th><th>Fixed on 1st try</th><th>Fixed within 3</th><th>Steps re-run vs 1 full re-run</th></tr>
+  ${s.map(r=>`<tr><td>${r.fault}</td><td>${r.runs}</td><td>${pct(r.fixed1)}</td><td>${pct(r.fixed3)}</td><td>${pct(r.cost)}</td></tr>`).join('')}
+  <tr><td><b>Equal-weighted average</b></td><td></td><td><b>${pct(a1/n)}</b></td><td><b>${pct(a3/n)}</b></td><td><b>${pct(c/n)}</b></td></tr></table></div>
+  <p class="mut">Pick a failed run on the left to see its diagnosis.</p>`;
+}
+async function show(id,el){
+  document.querySelectorAll('.run').forEach(x=>x.classList.remove('on'));if(el)el.classList.add('on');
+  const d=await j('/api/run?id='+id), right=d.suspect===d.truth;
+  $('main').innerHTML=`<h1>Run ${d.run_id}</h1>
+  <p>Diagnosis: <b>step ${d.suspect}</b> (${d.steps[d.suspect].type}) &mdash; <span class="${right?'ok':'bad'}">${right?'correct':'wrong, true cause was step '+d.truth}</span>
+  <span class="mut"> &middot; actual fault: ${d.fault_type} &middot; top 3 suspects: ${d.ranking.join(', ')}</span></p>
+  <div class="tl">${d.steps.map(s=>`<div class="step ${s.idx===d.suspect?'sus':''} ${s.idx===d.truth?'tru':''} ${s.idx<d.suspect?'skip':''}" style="background:rgba(255,90,90,${Math.min(s.anomaly/6,1)*0.55})">
+   <b>#${s.idx} ${s.type}</b><br>${s.tool}<br>conf ${s.confidence.toFixed(2)}<br>${Math.round(s.latency_ms)} ms${s.error?'<br><span class="bad">error</span>':''}
+   ${s.idx===d.suspect?'<br>&#9664; suspect':''}${s.idx===d.truth?'<br>&#9733; true cause':''}</div>`).join('')}</div>
+  <p class="mut">Red = how unusual the step looks. Yellow border = suspect. Green = true cause. Faded = skipped by checkpointed replay.</p>
+  <div class="box"><b>Evidence</b><ul>${d.evidence.map(e=>`<li>${e}</li>`).join('')}</ul></div>
+  <div class="box"><b>Replay from checkpoint at step ${d.suspect}</b><br>Re-ran ${d.replay_rerun} of ${d.steps.length} steps.<br>
+   Final output: original <b>${d.original}</b> &rarr; replayed <b>${d.replayed}</b> (expected <b>${d.expected}</b>) &mdash; <span class="${d.replay_ok?'ok':'bad'}">${d.replay_ok?'fixed':'still failing'}</span></div>
+  <div class="box"><b>Search over the top 3 suspects</b>${d.attempts.map((a,i)=>`<br>Attempt ${i+1}: fix step ${a.step} &rarr; <span class="${a.fixed?'ok':'bad'}">${a.fixed?'fixed':'not fixed'}</span> (${a.rerun} steps re-run)`).join('')}</div>`;
+}
+(async()=>{const r=await j('/api/runs');
+ $('list').innerHTML=r.map(x=>`<div class="run" data-id="${x.run_id}"><span>Run ${x.run_id}</span><span class="tag">${x.fault_type}</span></div>`).join('');
+ $('list').onclick=e=>{const d=e.target.closest('.run');if(d)show(d.dataset.id,d)};home();})();
+</script></body></html>

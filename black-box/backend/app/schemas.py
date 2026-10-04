@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -10,6 +12,7 @@ class RunCreate(BaseModel):
 
 class RunResponse(RunCreate):
     id: int
+    created_at: datetime | None = None   # NEW
 
     class Config:
         from_attributes = True
@@ -24,9 +27,15 @@ class StepCreate(BaseModel):
     error_message: str | None = None
 
 
+class StepIngest(StepCreate):
+    """What an agent POSTs. `metrics` is optional but enables the AI diagnosis."""
+    metrics: dict | None = None
+
+
 class StepResponse(StepCreate):
     id: int
     run_id: int
+    created_at: datetime | None = None   # NEW
 
     class Config:
         from_attributes = True
@@ -39,6 +48,11 @@ class DiagnosisResponse(BaseModel):
     failed_step_name: str
     reason: str
     evidence: list[str]
+    # filled in by the AI model when step metrics exist (frontend already shows them if present)
+    probability: float | None = None
+    confidence: str | None = None
+    probabilities: list[dict] | None = None
+    method: str = "rule-based"
 
 
 class ReplayCreate(BaseModel):

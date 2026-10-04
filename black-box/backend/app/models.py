@@ -50,3 +50,14 @@ class Checkpoint(Base):
     step_number = Column(Integer, nullable=False)
     state_data = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StepMetric(Base):
+    """Observable metrics for one step (tool, latency, tokens, confidence...), stored as JSON.
+    Kept in its own table so the existing `steps` table does not need a migration."""
+    __tablename__ = "step_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, nullable=False, index=True)
+    step_number = Column(Integer, nullable=False)
+    data = Column(Text, nullable=False)

@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Run, Step
-from ..schemas import StepCreate, StepResponse
+import json
+
+from ..models import Run, Step, StepMetric
+from ..schemas import StepIngest, StepResponse
 
 
 router = APIRouter(
@@ -15,7 +17,7 @@ router = APIRouter(
 @router.post("/", response_model=StepResponse)
 def create_step(
     run_id: int,
-    step_data: StepCreate,
+    step_data: StepIngest,
     db: Session = Depends(get_db)
 ):
     run = db.query(Run).filter(Run.id == run_id).first()
@@ -37,6 +39,9 @@ def create_step(
     )
 
     db.add(step)
+    if step_data.metrics:
+        db.add(StepMetric(run_id=run_id, step_number=step_data.step_number,
+                          data=json.dumps(step_data.metrics)))
     db.commit()
     db.refresh(step)
 
